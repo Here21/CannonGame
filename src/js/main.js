@@ -7,6 +7,8 @@
   let targetAngle; // 目标角度
   let sx, sy; // 炮弹坐标
 
+  // 传值变量
+  const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
 
   let letter; // 字母
   let cannon; // 炮管
@@ -77,15 +79,16 @@
 
   // 定义字母类
   const LetterObject = function() {
-    this.num = 10;
+    this.num = 0;
     this.x = [];
     this.y = [];
     this.radius = 25;
     this.margin = 20;
     this.letter = [];
     this.alive = [];  // boolean 是否可用
-  }
+  };
   LetterObject.prototype.init = function() {
+    this.num = letters.length;
     // 计算左偏移值，近似居中。anchor 在 x / 2, y / 2
     let offset;
     if (canvasWidth < (this.num - 1) * this.radius * 2 + (this.margin * (this.num - 1))) {
@@ -96,36 +99,52 @@
     for(let i = 0; i < this.num; i++){
       this.x[i] = this.radius * 2 * i + this.margin * i + offset; // 居中
       this.y[i] = 100; // 固定高度
-      this.alive[i] = true;   //初始值都为false
+      this.alive[i] = true;   // 初始值都为false
+      this.letter[i] = letters[i];  // 分配字母
     }
-  }
+  };
   LetterObject.prototype.update = function() {
-    for(let i =0;i< this.num; i++){
-      if(this.alive[i]){
+    for(let i = 0; i < this.num; i++){
+      this.draw(i);
+      // 判断鼠标点击区域
+      if (ctx.isPointInPath(mx, my)) {
+        console.log('no is click', i);
+        // 计算偏角
+        shell.alive = true;
+        if(circleCollide({x: this.x[i], y: this.y[i], radius: this.radius}, shell)) {
+          // 初始化炮弹，重置鼠标点击位置
+          shell.init();
+          mx = 0;
+          my = 0;
+        }
+        targetAngle = tAngle({x: this.x[i], y: this.y[i]}, { x: cannon.tx, y: cannon.ty});
+        //                     速度     *    时间 = 距离 /  帧率
+        shell.x = shell.x + shell.speed * frametime / fps * Math.cos(targetAngle * Math.PI / 180);
+        shell.y = shell.y - shell.speed * frametime / fps * Math.sin(targetAngle * Math.PI / 180);
+
+      }
+    }
+  };
+  LetterObject.prototype.draw = function (index) {
+      if(this.alive[index]){
         ctx.beginPath();
-        ctx.arc(this.x[i], this.y[i], this.radius, 0, Math.PI * 2, true);
+        ctx.arc(this.x[index], this.y[index], this.radius, 0, Math.PI * 2, true);
         ctx.closePath();
         ctx.fillStyle = 'rgb(255,255,255)';
         ctx.fill();
 
-        // 判断鼠标点击区域
-        if (ctx.isPointInPath(mx, my)) {
-          console.log('no is click', i);
-          // 计算偏角
-          targetAngle = tAngle({x: this.x[i], y: this.y[i]}, { x: cannon.tx, y: cannon.ty});
-          //                     速度     *    时间 = 距离 /  帧率
-          shell.x = shell.x + shell.speed * frametime / fps * Math.cos(targetAngle * Math.PI / 180);
-          shell.y = shell.y - shell.speed * frametime / fps * Math.sin(targetAngle * Math.PI / 180);
-        }
+        // 绘制文字 字体锚点在文字左下角
+        ctx.fillStyle = 'rgb(0, 0, 0)';
+        ctx.font = "32px KGMissKindyMarker";
+        ctx.fillText(this.letter[index], this.x[index] - 10, this.y[index] + 16);
       }
-    }
-  }
-
+  };
 
   // 定义大炮类
   // anchor 图片在左上角
   const CannonObject = function () {
     this.angle = 0;
+    this.speed = 30;
     this.x = 0;
     this.y = 0; // 距离底部高度
     this.tx = canvasWidth / 2; // 假象转化锚点后实际坐标位置
@@ -144,16 +163,22 @@
     this.by = canvasHeight - this.baseImg.height;
   };
   CannonObject.prototype.update = function () {
+    // TODO: 炮台移动过程
+    this.angle = 90 - targetAngle;
+    this.draw(this.angle);
+  };
+  CannonObject.prototype.draw = function (degrees) {
     // 按照层级先绘制炮垒
     ctx.drawImage(this.baseImg, this.bx, this.by);
     // 绘制
     ctx.save();
     ctx.translate(this.x + this.img.width / 2, this.y + this.img.height);
     // 炮管朝向与坐标系Y轴是反的，旋转角度是90 - targetAngle的夹角
-    ctx.rotate((90 - targetAngle) * Math.PI / 180);  // rotate() 参数是弧度为单位的值
+    ctx.rotate(degrees * Math.PI / 180);  // rotate() 参数是弧度为单位的值
     ctx.drawImage(this.img, -this.img.width / 2, -this.img.height);
     ctx.restore();
   };
+
 
   // 定义炮弹类
   const ShellObject = function() {
@@ -161,45 +186,26 @@
     this.x = 0;
     this.y = 0;
     this.radius = 25;
+    // TODO： 炮弹随机确定目标
     this.letter = '';
     this.alive = false;  // boolean 是否可用
-  }
+  };
   ShellObject.prototype.init = function() {
     this.x = cannon.tx;
     this.y = cannon.ty;
-    this.alive = true;
-  }
+    this.alive = false;
+  };
   ShellObject.prototype.update = function() {
     if(this.alive){
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, true);
-      ctx.closePath();
-      ctx.fillStyle = 'rgb(255,255,255)';
-      ctx.fill();
-
-      // // 判断鼠标点击区域
-      // if (ctx.isPointInPath(mx, my)) {
-      //   console.log('no is click', i);
-      //   const angle = tAngle({x: this.x[i], y: this.y[i]}, { x: cannon.tx, y: cannon.ty});
-      //   // 判断旋转角度，以cannon 的位置来看，cannon.tx 右边是正角度旋转，左边是负角度旋转
-      //   targetAngle = angle;
-      //   // console.log("------", angle, '====', targetAngle);
-      //   // console.log("position", cannon.tx, cannon.ty, this.x[i], this.y[i]);
-      // }
+      this.draw();
     }
-  }
+  };
+  ShellObject.prototype.draw = function () {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, true);
+    ctx.closePath();
+    ctx.fillStyle = 'rgb(255,255,255)';
+    ctx.fill();
+  };
 
 })();
-
-// TODO: 使用ES6的类的方式重写
-// class Node {
-//   constructor() {
-//   }
-//   update() {
-//
-//   }
-// }
-//
-// class Cannon extends Node {
-//
-// }

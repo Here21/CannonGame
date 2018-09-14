@@ -4,6 +4,11 @@ html {
     line-height: 1.4;
 }
 
+@font-face {
+  font-family: 'KGMissKindyMarker';
+  src: url('../font/KGMissKindyMarker.ttf');
+}
+
 #canvas {
   background: #222222;
 }
