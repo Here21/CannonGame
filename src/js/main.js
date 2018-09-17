@@ -2,6 +2,7 @@
   const canvasWidth = 800;
   const canvasHeight = 600;
   let canvas; // 画布对象
+  let state = 'stop'; // 游戏状态
   let ctx; // 画布内容
   let mx, my; // 点击坐标
   let targetAngle; // 目标角度
@@ -9,10 +10,14 @@
 
   // 传值变量
   const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
-
+  const colorsBank = ['#f5222d', '#fa541c', '#fa8c16', '#faad14', '#fadb14', '#a0d911', '#52c41a', '#13c2c2', '#1890ff', '#2f54eb', '#722ed1', '#eb2f96',
+    '#a3f3eb', '#f1ffab', '#6bd5e1', '#ffd98e', '#ff8364', '#92a4c0', '#f4adad', '#e58cdb'];
+  let targets = shuffle(letters); // 目标字母集合（乱序）
+  let colors = shuffle(colorsBank);  // 目标字母背景色
   let letter; // 字母
   let cannon; // 炮管
   let shell; // 炮弹
+  let board; // 公告板
 
   // 目前大多数设备的屏幕刷新率为 60 次/秒，所以通常来讲 fps 为 60 frame/s 时动画效果最好，也就是每帧的消耗时间为 16.67ms。
   let fps = 0;
@@ -45,13 +50,18 @@
     shell = new ShellObject();
     shell.init();
 
+    // new 公告类
+    board = new BoardObject();
+    board.init();
+
     // 事件
     canvas.addEventListener("click", (event) => {
       mx = event.offsetX;
       my = event.offsetY;
       console.log("x: ", mx, "y: ",  my);
-      console.log("cannon x: ", cannon.tx, "cannon y: ",  cannon.ty);
-
+      if (state === 'stop') {
+        state = 'start';
+      }
     });
   };
 
@@ -69,10 +79,14 @@
     // 清除画布内容
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-    // 绘制画布内容
-    letter.update();
-    shell.update();
-    cannon.update();
+    if (state === 'start') {
+      // 绘制画布内容
+      letter.update();
+      shell.update();
+      cannon.update();
+    } else if (state === 'stop') {
+      board.update();
+    }
 
   };
 
@@ -86,6 +100,7 @@
     this.margin = 20;
     this.letter = [];
     this.alive = [];  // boolean 是否可用
+    this.color = [];  // 颜色
   };
   LetterObject.prototype.init = function() {
     this.num = letters.length;
@@ -101,43 +116,51 @@
       this.y[i] = 100; // 固定高度
       this.alive[i] = true;   // 初始值都为false
       this.letter[i] = letters[i];  // 分配字母
+      this.color[i] = colors[i];  // 分配颜色
     }
   };
   LetterObject.prototype.update = function() {
     for(let i = 0; i < this.num; i++){
-      this.draw(i);
-      // 判断鼠标点击区域
-      if (ctx.isPointInPath(mx, my)) {
-        console.log('no is click', i);
-        // 计算偏角
-        shell.alive = true;
-        if(circleCollide({x: this.x[i], y: this.y[i], radius: this.radius}, shell)) {
-          // 初始化炮弹，重置鼠标点击位置
-          shell.init();
-          mx = 0;
-          my = 0;
-        }
-        targetAngle = tAngle({x: this.x[i], y: this.y[i]}, { x: cannon.tx, y: cannon.ty});
-        //                     速度     *    时间 = 距离 /  帧率
-        shell.x = shell.x + shell.speed * frametime / fps * Math.cos(targetAngle * Math.PI / 180);
-        shell.y = shell.y - shell.speed * frametime / fps * Math.sin(targetAngle * Math.PI / 180);
+      if(this.alive[i]){
+        this.draw(i);
+        // 判断鼠标点击区域
+        if (ctx.isPointInPath(mx, my)) {
+          console.log('no is click', i);
+          // 计算偏角
+          shell.alive = true;
+          if(circleCollide({x: this.x[i], y: this.y[i], radius: this.radius}, shell)) {
+            // 初始化炮弹，重置鼠标点击位置
+            shell.init();
+            mx = 0;
+            my = 0;
 
+            // 判定目标
+            if (cannon.letter === this.letter[i]) {
+              this.alive[i] = false;
+              targets.pop();
+              cannon.init();
+            }
+          }
+          targetAngle = tAngle({x: this.x[i], y: this.y[i]}, { x: cannon.tx, y: cannon.ty});
+          //                     速度     *    时间 = 距离 /  帧率
+          shell.x = shell.x + shell.speed * frametime / fps * Math.cos(targetAngle * Math.PI / 180);
+          shell.y = shell.y - shell.speed * frametime / fps * Math.sin(targetAngle * Math.PI / 180);
+
+        }
       }
     }
   };
   LetterObject.prototype.draw = function (index) {
-      if(this.alive[index]){
-        ctx.beginPath();
-        ctx.arc(this.x[index], this.y[index], this.radius, 0, Math.PI * 2, true);
-        ctx.closePath();
-        ctx.fillStyle = 'rgb(255,255,255)';
-        ctx.fill();
+    ctx.beginPath();
+    ctx.arc(this.x[index], this.y[index], this.radius, 0, Math.PI * 2, true);
+    ctx.closePath();
+    ctx.fillStyle = this.color[index];
+    ctx.fill();
 
-        // 绘制文字 字体锚点在文字左下角
-        ctx.fillStyle = 'rgb(0, 0, 0)';
-        ctx.font = "32px KGMissKindyMarker";
-        ctx.fillText(this.letter[index], this.x[index] - 10, this.y[index] + 16);
-      }
+    // 绘制文字 字体锚点在文字左下角
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = "32px KGMissKindyMarker";
+    ctx.fillText(this.letter[index], this.x[index] - 10, this.y[index] + 15);
   };
 
   // 定义大炮类
@@ -153,6 +176,7 @@
     this.baseImg = new Image();
     this.bx = 0; // 直接定义位置
     this.by = 0; // 直接定义位置
+    this.letter = '';
   };
   CannonObject.prototype.init = function () {
     this.img.src = 'img/cannon.png';
@@ -161,6 +185,11 @@
     this.y = canvasHeight - this.img.height; // 距离底部高度
     this.bx = canvasWidth / 2 - this.baseImg.width / 2;
     this.by = canvasHeight - this.baseImg.height;
+    if (targets.length > 0) {
+      this.letter = targets[targets.length - 1];
+    } else {
+      this.letter = '';
+    }
   };
   CannonObject.prototype.update = function () {
     // TODO: 炮台移动过程
@@ -176,6 +205,13 @@
     // 炮管朝向与坐标系Y轴是反的，旋转角度是90 - targetAngle的夹角
     ctx.rotate(degrees * Math.PI / 180);  // rotate() 参数是弧度为单位的值
     ctx.drawImage(this.img, -this.img.width / 2, -this.img.height);
+
+    // 绘制文字 字体锚点在文字左下角
+    if (this.letter) {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = "50px KGMissKindyMarker";
+      ctx.fillText(this.letter.toLocaleLowerCase(), -8, -this.img.height / 3);
+    }
     ctx.restore();
   };
 
@@ -186,8 +222,6 @@
     this.x = 0;
     this.y = 0;
     this.radius = 25;
-    // TODO： 炮弹随机确定目标
-    this.letter = '';
     this.alive = false;  // boolean 是否可用
   };
   ShellObject.prototype.init = function() {
@@ -206,6 +240,28 @@
     ctx.closePath();
     ctx.fillStyle = 'rgb(255,255,255)';
     ctx.fill();
+  };
+
+  // 定义公告牌类
+  const BoardObject = function() {
+    this.x = 0;
+    this.y = 0;
+    this.text = '';
+  };
+  BoardObject.prototype.init = function() {
+    this.x = canvasWidth;
+    this.y = canvasHeight / 2;
+    this.text = '点击屏幕开始游戏';
+  };
+  BoardObject.prototype.update = function() {
+    this.draw();
+  };
+  BoardObject.prototype.draw = function () {
+    // 绘制文字 字体锚点在文字左下角
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = "60px KGMissKindyMarker";
+    const textWidth = ctx.measureText(this.text);  // 预测文字宽度
+    ctx.fillText(this.text, (this.x - textWidth.width) / 2, this.y);
   };
 
 })();
