@@ -24,7 +24,7 @@
   let lastframetime = 0,  frametime=0;  // 上一帧动画的时间，   两帧时间差
 
 
-  window.G = {}; // 全局对象
+  window.G = window.G || {}; // 全局对象
 
   G.startGame = () => {
     G.init();
