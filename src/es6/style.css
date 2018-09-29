@@ -1,6 +1,13 @@
+body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
 #wrap {
-  width: 100%;
-  height: 100%;
+  width: 900px;
+  height: 600px;
   background-image: url("./resources/bg.png");
   background-repeat: no-repeat;
   background-size: cover;

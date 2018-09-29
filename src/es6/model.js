@@ -3,17 +3,15 @@
 import { tAngle, circleCollide, shuffle } from './common';
 
 class Sprite {
-  x = 0;
-  y = 0;
-  color = '';
-  radius = 0;
-  alive = false;
-  margin = 0;
-  angle = 0;
-  ctx;
-
   constructor(ctx) {
     this.ctx = ctx;
+    this.x = 0;
+    this.y = 0;
+    this.color = '';
+    this.radius = 0;
+    this.alive = false;
+    this.margin = 0;
+    this.angle = 0;
   }
   update($event) {
     this.draw();
@@ -24,11 +22,10 @@ class Sprite {
 }
 
 export class Letter extends Sprite {
-  letter;
-  ctx;
-
   constructor(ctx) {
     super(ctx);
+    this.letter;
+    this.ctx;
   }
 
   init(x, y, color, letter, radius, margin) {
@@ -97,15 +94,19 @@ export class Letter extends Sprite {
 }
 
 export class Cannon extends Sprite {
-  tx; // 假象转化锚点后实际坐标位置
-  ty; // 假象转化锚点后实际坐标位置
-  bx; // 直接定义位置
-  by; // 直接定义位置
-  baseImg;
-  img;
-  targetAngle; // 目标角度
-  letter;
-  ammunition;
+  constructor(ctx) {
+    super(ctx);
+    this.tx; // 假象转化锚点后实际坐标位置
+    this.ty; // 假象转化锚点后实际坐标位置
+    this.bx; // 直接定义位置
+    this.by; // 直接定义位置
+    this.baseImg;
+    this.img;
+    this.targetAngle; // 目标角度
+    this.letter;
+    this.ammunition;
+
+  }
 
   init(imgObj, baseImgObj, canvasWidth, canvasHeight, ammunition) {
     this.img = imgObj;
@@ -153,7 +154,11 @@ export class Cannon extends Sprite {
 }
 
 export class Shell extends Sprite {
-  speed;
+  constructor(props) {
+    super(props);
+    this.speed;
+  }
+
   init(x, y, speed = 30) {
     this.x = x;
     this.y = y;
@@ -179,8 +184,11 @@ export class Shell extends Sprite {
 }
 
 export class Board extends Sprite {
-  textArr;
-  img;
+  constructor(props) {
+    super(props);
+    this.textArr;
+    this.img;
+  }
   init(x, y, textArr, img) {
     this.x = x;
     this.y = y;
